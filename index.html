@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Крестики-нолики</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #74ebd5, #9face6);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .choose {
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .choose button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 5px;
+            background: #ffffff;
+            color: #333;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .choose button:hover {
+            background-color: #ddd;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #ffffffbb;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .cell:hover {
+            background-color: #fff;
+            transform: scale(1.05);
+        }
+
+        .message {
+            color: #fff;
+            font-size: 20px;
+            margin-bottom: 10px;
+            height: 24px;
+        }
+
+        #restartBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4b79a1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #restartBtn:hover {
+            background-color: #283e51;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Крестики-нолики</h1>
+
+        <div id="choose" class="choose">
+            <p>Выберите символ:</p>
+            <button onclick="selectSymbol('x')">Играть за X</button>
+            <button onclick="selectSymbol('o')">Играть за O</button>
+        </div>
+
+        <div class="board" id="board" style="display: none;">
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+            <div class="cell" data-cell></div>
+        </div>
+
+        <div id="message" class="message"></div>
+        <button id="restartBtn" style="display: none;">🔁 Начать заново</button>
+    </div>
+
+    <script>
+        const cells = document.querySelectorAll('[data-cell]');
+        const board = document.getElementById('board');
+        const restartBtn = document.getElementById('restartBtn');
+        const message = document.getElementById('message');
+        const choose = document.getElementById('choose');
+
+        let playerSymbol = 'x';
+        let botSymbol = 'o';
+        let currentTurn = 'x';
+        let gameActive = false;
+
+        const WINNING_COMBINATIONS = [
+            [0,1,2],[3,4,5],[6,7,8],
+            [0,3,6],[1,4,7],[2,5,8],
+            [0,4,8],[2,4,6]
+        ];
+
+        function selectSymbol(symbol) {
+            playerSymbol = symbol;
+            botSymbol = (symbol === 'x') ? 'o' : 'x';
+            choose.style.display = 'none';
+            board.style.display = 'grid';
+            restartBtn.style.display = 'inline-block';
+            startGame();
+        }
+
+        function startGame() {
+            currentTurn = 'x';
+            gameActive = true;
+            cells.forEach(cell => {
+                cell.classList.remove('x', 'o');
+                cell.textContent = '';
+                cell.addEventListener('click', handleClick, { once: true });
+            });
+            setMessage('');
+
+            if (botSymbol === 'x') {
+                setTimeout(botMove, 300);
+            }
+        }
+
+        function handleClick(e) {
+            if (!gameActive) return;
+            const cell = e.target;
+
+            if (currentTurn !== playerSymbol) return;
+
+            makeMove(cell, playerSymbol);
+
+            if (checkEnd(playerSymbol)) return;
+
+            setTimeout(botMove, 300);
+        }
+
+        function makeMove(cell, symbol) {
+            cell.textContent = symbol.toUpperCase();
+            cell.classList.add(symbol);
+            cell.removeEventListener('click', handleClick);
+        }
+
+        function botMove() {
+            if (!gameActive) return;
+
+            const available = [...cells].filter(cell =>
+                !cell.classList.contains('x') && !cell.classList.contains('o')
+            );
+
+            if (available.length === 0) return;
+
+            const cell = available[Math.floor(Math.random() * available.length)];
+            makeMove(cell, botSymbol);
+
+            checkEnd(botSymbol);
+        }
+
+        function checkEnd(symbol) {
+            if (checkWin(symbol)) {
+                setMessage(symbol.toUpperCase() + ' победил!');
+                gameActive = false;
+                disableBoard();
+                return true;
+            } else if (isDraw()) {
+                setMessage('Ничья!');
+                gameActive = false;
+                return true;
+            }
+            currentTurn = (symbol === 'x') ? 'o' : 'x';
+            return false;
+        }
+
+        function checkWin(symbol) {
+            return WINNING_COMBINATIONS.some(combo =>
+                combo.every(index =>
+                    cells[index].classList.contains(symbol)
+                )
+            );
+        }
+
+        function isDraw() {
+            return [...cells].every(cell =>
+                cell.classList.contains('x') || cell.classList.contains('o')
+            );
+        }
+
+        function setMessage(text) {
+            message.textContent = text;
+        }
+
+        function disableBoard() {
+            cells.forEach(cell => {
+                cell.removeEventListener('click', handleClick);
+            });
+        }
+
+        restartBtn.addEventListener('click', () => {
+            board.style.display = 'none';
+            restartBtn.style.display = 'none';
+            choose.style.display = 'block';
+            message.textContent = '';
+        });
+    </script>
+</body>
+</html>
